@@ -1,57 +1,43 @@
 package model;
 
+import java.util.List;
+
 public class Recipe {
     private int id;
     private String name;
     private String type;
-    private String ingredients;
-    private String recipe;
+    private String imagePath;
+    private List<Ingredient> ingredients;
+    private String instructions;
 
-    public Recipe(int id, String name, String type, String ingredients, String recipe) {
+    public Recipe(int id, String name, String type, String imagePath, List<Ingredient> ingredients, String instructions) {
         this.id = id;
         this.name = name;
         this.type = type;
+        this.imagePath = imagePath;
         this.ingredients = ingredients;
-        this.recipe = recipe;
+        this.instructions = instructions;
     }
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
 
-    public int getId() {
-        return id;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
 
-    public String getName() {
+    public String getImagePath() { return imagePath; }
+    public void setImagePath(String imagePath) { this.imagePath = imagePath; }
+
+    public List<Ingredient> getIngredients() { return ingredients; }
+    public void setIngredients(List<Ingredient> ingredients) { this.ingredients = ingredients; }
+
+    public String getInstructions() { return instructions; }
+    public void setInstructions(String instructions) { this.instructions = instructions; }
+
+    @Override
+    public String toString() {
         return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public String getIngredients() {
-        return ingredients;
-    }
-
-    public void setIngredients(String ingredients) {
-        this.ingredients = ingredients;
-    }
-
-    public String getRecipe() {
-        return recipe;
-    }
-
-    public void setRecipe(String recipe) {
-        this.recipe = recipe;
     }
 }

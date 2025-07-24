@@ -2,293 +2,375 @@ package view;
 
 import controller.RecipeManager;
 import model.Recipe;
-import persistence.TextRecipeDao;
+import persistence.JsonRecipeDao;
+import utils.ImageUtils;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.awt.Image;
-import javax.swing.ImageIcon;
 
+/**
+ * Main application window for Recipe Organizer.
+ * Uses BackgroundPanel to display an image as the window's background.
+ */
 public class MainWindow extends JFrame {
-    private RecipeManager recipeManager;
-    private RecipeTableModel tableModel;
-    private JTable recipeTable;
-    private JTextField idField, nameField, ingredientField, searchField;
-    private JComboBox<String> typeCombo;
-    private JTextArea recipeArea;
-    private JButton addButton, updateButton, deleteButton, searchButton;
+    private RecipeManager manager;                   // Handles recipe logic (load/save)
+    private DefaultListModel<Recipe> listModel = new DefaultListModel<>(); // List model for JList
+    private JList<Recipe> recipeList;                // The left recipe list UI
 
+    // Filter & sort UI
+    private JComboBox<String> filterTypeCombo;
+    private JButton btnSortName;
+    private String currentFile = "src/recipes_sample.json"; // Currently opened file
+    private boolean sortByNameAsc = true;               // Sort direction
+
+    // Detail fields for layout
+    private JLabel nameLabel, typeLabel, idLabel, imgLabel;
+    private JTextArea ingArea, instrArea;
+
+    private static final String[] ALL_TYPES = {"All", "starter", "main dish", "dessert", "salad", "soup"};
+
+    /**
+     * Build and show the main window.
+     */
     public MainWindow() {
-        super("Recipe Management System");
-        TextRecipeDao dao = new TextRecipeDao("src/view/database.txt");
-        recipeManager = new RecipeManager(dao);
-        tableModel = new RecipeTableModel();
-        tableModel.setRecipes(recipeManager.getRecipes());
-        setJMenuBar(createMenuBar());
-        initComponents();
-    }
-
-    private JMenuBar createMenuBar() {
+        // ------------------ MENU BAR ------------------
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
-        JMenuItem newItem = new JMenuItem("New");
-        JMenuItem openItem = new JMenuItem("Open");
-        JMenuItem saveItem = new JMenuItem("Save");
-        JMenuItem exitItem = new JMenuItem("Exit");
-        exitItem.addActionListener(e -> System.exit(0));
-        fileMenu.add(newItem);
+
+        // Open (choose JSON file)
+        JMenuItem openItem = new JMenuItem("Open...");
+        openItem.addActionListener(e -> openRecipeJsonFile());
         fileMenu.add(openItem);
-        fileMenu.add(saveItem);
-        fileMenu.addSeparator();
-        fileMenu.add(exitItem);
+
+        // New (reset to sample data)
+        JMenuItem newItem = new JMenuItem("New");
+        newItem.addActionListener(e -> newRecipeFile());
+        fileMenu.add(newItem);
+
+        // Close (exit app)
+        JMenuItem closeItem = new JMenuItem("Close");
+        closeItem.addActionListener(e -> System.exit(0));
+        fileMenu.add(closeItem);
+
         menuBar.add(fileMenu);
+        setJMenuBar(menuBar);
 
-        JMenu helpMenu = new JMenu("Help");
-        JMenuItem aboutItem = new JMenuItem("About");
-        aboutItem.addActionListener(e -> JOptionPane.showMessageDialog(this, "Recipe Organizer\nVersion 1.0"));
-        helpMenu.add(aboutItem);
-        menuBar.add(helpMenu);
-        return menuBar;
-    }
+        // ------------------ DATA LAYER ------------------
+        // Always load from sample file on app start
+        manager = new RecipeManager(new JsonRecipeDao(currentFile));
 
-    private void initComponents() {
+        setTitle("Recipe Organizer");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new BorderLayout());
+        setSize(1024, 700);
+        setLocationRelativeTo(null); // Center
 
-        // Left panel: Form
-        JPanel formPanel = new JPanel();
-        formPanel.setLayout(new GridBagLayout());
+        // ------------------ MAIN LAYOUT WITH BACKGROUND ------------------
+        // Use BackgroundPanel for background image
+        BackgroundPanel rootPanel = new BackgroundPanel("resources/images/default_bg.jpg");
+        rootPanel.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+        gbc.insets = new Insets(20,20,20,20);
 
-        JLabel idLabel = new JLabel("ITEM ID:");
-        idLabel.setForeground(Color.BLACK);
-        idField = new JTextField(10);
-        JLabel nameLabel = new JLabel("NAME:");
-        nameLabel.setForeground(Color.BLACK);
-        nameField = new JTextField(10);
-        JLabel typeLabel = new JLabel("TYPE:");
-        typeLabel.setForeground(Color.BLACK);
-        typeCombo = new JComboBox<>(new String[]{"STARTERS", "MAIN DISH", "DESSERT"});
-        JLabel ingredientLabel = new JLabel("INGRIDIENTS:");
-        ingredientLabel.setForeground(Color.BLACK);
-        ingredientField = new JTextField(15);
-        JLabel recipeLabel = new JLabel("RECIPE:");
-        recipeLabel.setForeground(Color.BLACK);
-        recipeArea = new JTextArea(5, 15);
-        JScrollPane recipeScroll = new JScrollPane(recipeArea);
+        // Main border panel, white, with border & rounded corners
+        JPanel mainPanel = new JPanel(new BorderLayout(18, 12));
+        mainPanel.setBackground(Color.WHITE);
+        mainPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(225,225,225), 1, true),
+            BorderFactory.createEmptyBorder(20,20,20,20)
+        ));
+        mainPanel.setPreferredSize(new Dimension(950, 610));
 
-        // Đặt màu chữ cho các button
-        Color buttonTextColor = Color.BLACK;
-        searchButton = new JButton("SEARCH");
-        searchButton.setForeground(buttonTextColor);
-        addButton = new JButton("ADD RECORD");
-        addButton.setForeground(buttonTextColor);
-        updateButton = new JButton("UPDATE RECORD");
-        updateButton.setForeground(buttonTextColor);
-        deleteButton = new JButton("DELETE RECORD");
-        deleteButton.setForeground(buttonTextColor);
+        // ------------------ HEADER ------------------
+        JLabel titleLabel = new JLabel("Recipe Organizer", JLabel.CENTER);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 36));
+        titleLabel.setForeground(new Color(0,51,102));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0,0,16,0));
+        mainPanel.add(titleLabel, BorderLayout.NORTH);
 
-        gbc.gridx = 0; gbc.gridy = 0; formPanel.add(idLabel, gbc);
-        gbc.gridx = 1; formPanel.add(idField, gbc);
-        gbc.gridx = 0; gbc.gridy = 1; formPanel.add(nameLabel, gbc);
-        gbc.gridx = 1; formPanel.add(nameField, gbc);
-        gbc.gridx = 0; gbc.gridy = 2; formPanel.add(typeLabel, gbc);
-        gbc.gridx = 1; formPanel.add(typeCombo, gbc);
-        gbc.gridx = 0; gbc.gridy = 3; formPanel.add(ingredientLabel, gbc);
-        gbc.gridx = 1; formPanel.add(ingredientField, gbc);
-        gbc.gridx = 0; gbc.gridy = 4; formPanel.add(recipeLabel, gbc);
-        gbc.gridx = 1; formPanel.add(recipeScroll, gbc);
+        // ------------------ LEFT: FILTER + LIST ------------------
+        JPanel leftPanel = new JPanel(new BorderLayout(10,8));
+        leftPanel.setOpaque(false); // transparent to show background
 
-        // Search field
-        gbc.gridx = 0; gbc.gridy = 5; formPanel.add(new JLabel("Search:"), gbc);
-        searchField = new JTextField(10);
-        gbc.gridx = 1; formPanel.add(searchField, gbc);
-        gbc.gridx = 1; gbc.gridy = 6; formPanel.add(searchButton, gbc);
+        // Filter & sort row
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        filterPanel.setOpaque(false);
+        filterTypeCombo = new JComboBox<>(ALL_TYPES);
+        filterTypeCombo.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        filterTypeCombo.addActionListener(e -> refreshRecipeList());
+        btnSortName = new JButton("Sort by name");
+        btnSortName.addActionListener(e -> {
+            sortByNameAsc = !sortByNameAsc;
+            btnSortName.setText(sortByNameAsc ? "Sort by name ▲" : "Sort by name ▼");
+            refreshRecipeList();
+        });
+        filterPanel.add(new JLabel("Type:"));
+        filterPanel.add(filterTypeCombo);
+        filterPanel.add(btnSortName);
+        leftPanel.add(filterPanel, BorderLayout.NORTH);
 
-        // Button panel
+        // Recipe JList (custom renderer for thumb/type)
+        recipeList = new JList<>(listModel);
+        recipeList.setCellRenderer(new RecipeListRenderer());
+        recipeList.setFixedCellHeight(70);
+        JScrollPane listScroll = new JScrollPane(recipeList);
+        listScroll.setPreferredSize(new Dimension(320, 480));
+        leftPanel.add(listScroll, BorderLayout.CENTER);
+
+        mainPanel.add(leftPanel, BorderLayout.WEST);
+
+        // ------------------ BOTTOM: BUTTONS ------------------
         JPanel buttonPanel = new JPanel();
-        buttonPanel.add(addButton);
-        buttonPanel.add(updateButton);
-        buttonPanel.add(deleteButton);
-        gbc.gridx = 1; gbc.gridy = 7; formPanel.add(buttonPanel, gbc);
+        buttonPanel.setOpaque(false);
+        JButton btnAdd = new JButton("Add");
+        btnAdd.addActionListener(this::onAdd);
+        JButton btnEdit = new JButton("Edit");
+        btnEdit.addActionListener(this::onEdit);
+        JButton btnDelete = new JButton("Delete");
+        btnDelete.addActionListener(this::onDelete);
+        buttonPanel.add(btnAdd);
+        buttonPanel.add(btnEdit);
+        buttonPanel.add(btnDelete);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
 
-        // GridBagLayout: căn đều và thêm "đệm" để đẩy các thành phần lên trên khi phóng to
-        gbc.gridx = 0; gbc.gridy = 8; gbc.gridwidth = 2; gbc.weighty = 1; gbc.fill = GridBagConstraints.VERTICAL;
-        formPanel.add(Box.createVerticalGlue(), gbc);
-        gbc.weighty = 0; gbc.gridwidth = 1; gbc.fill = GridBagConstraints.NONE;
+        // ------------------ CENTER: DETAIL PANEL ------------------
+        JPanel detailPanel = new JPanel();
+        detailPanel.setBackground(new Color(250,250,255, 240));
+        detailPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(220,220,235), 1, true),
+            BorderFactory.createEmptyBorder(20, 28, 20, 28)
+        ));
+        detailPanel.setLayout(new BorderLayout(0, 16));
+        detailPanel.setPreferredSize(new Dimension(540, 520));
 
-        // Table (right)
-        recipeTable = new JTable(tableModel);
-        recipeTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        recipeTable.setShowGrid(true);
-        recipeTable.setGridColor(Color.GRAY);
-        recipeTable.setShowHorizontalLines(true);
-        recipeTable.setShowVerticalLines(true);
-        recipeTable.setForeground(Color.BLACK);
-        // Đặt header in đậm
-        javax.swing.table.JTableHeader header = recipeTable.getTableHeader();
-        header.setForeground(Color.BLACK);
-        header.setFont(header.getFont().deriveFont(java.awt.Font.BOLD));
-        // Tooltip hiển thị full nội dung ô
-        recipeTable.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
-            @Override
-            public java.awt.Component getTableCellRendererComponent(
-                    javax.swing.JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                java.awt.Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                if (value != null) {
-                    setToolTipText(value.toString());
-                } else {
-                    setToolTipText(null);
-                }
-                return c;
-            }
-        });
-        // Custom renderer cho cột Recipe để wrap text và hiển thị full nội dung
-        recipeTable.getColumnModel().getColumn(4).setCellRenderer(new javax.swing.table.DefaultTableCellRenderer() {
-            @Override
-            public java.awt.Component getTableCellRendererComponent(
-                    javax.swing.JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                JTextArea area = new JTextArea();
-                area.setLineWrap(true);
-                area.setWrapStyleWord(true);
-                area.setText(value != null ? value.toString() : "");
-                area.setFont(table.getFont());
-                area.setForeground(table.getForeground());
-                area.setBackground(isSelected ? table.getSelectionBackground() : table.getBackground());
-                area.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 2, 2, 2));
-                area.setEditable(false);
-                area.setToolTipText(area.getText());
-                return area;
-            }
-        });
-        // Set preferred width cho từng cột
-        recipeTable.getColumnModel().getColumn(0).setPreferredWidth(40);  // ID
-        recipeTable.getColumnModel().getColumn(1).setPreferredWidth(180); // Name
-        recipeTable.getColumnModel().getColumn(2).setPreferredWidth(120); // Type
-        recipeTable.getColumnModel().getColumn(3).setPreferredWidth(250); // Ingredients
-        recipeTable.getColumnModel().getColumn(4).setPreferredWidth(400); // Recipe
-        recipeTable.setRowHeight(48);
-        JScrollPane tableScroll = new JScrollPane(recipeTable);
-        tableScroll.setPreferredSize(new Dimension(500, 300));
-        tableScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-        tableScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
-        // tableScroll.getViewport().setBackground(new java.awt.Color(245, 245, 245)); // bỏ màu nền cũ
+        // ---------- Top Row: Name / Type / ID ----------
+        JPanel infoRow = new JPanel();
+        infoRow.setLayout(new BoxLayout(infoRow, BoxLayout.X_AXIS));
+        infoRow.setOpaque(false);
 
-        // Debug kiểm tra resource
-        System.out.println("Resource: " + getClass().getResource("/img/background1.jpg"));
-        // Load ảnh nền (ưu tiên resource, nếu không được thì thử đường dẫn tuyệt đối)
-        Image bgImage = null;
-        try {
-            java.net.URL url = getClass().getResource("/img/background1.jpg");
-            if (url != null) {
-                bgImage = new ImageIcon(url).getImage();
+        nameLabel = new JLabel("Name:");
+        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        nameLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 20));
+
+        typeLabel = new JLabel("Type:");
+        typeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+        typeLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 20));
+
+        idLabel = new JLabel("ID:");
+        idLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        idLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 20));
+
+        infoRow.add(nameLabel);
+        infoRow.add(Box.createHorizontalGlue());
+        infoRow.add(typeLabel);
+        infoRow.add(Box.createHorizontalGlue());
+        infoRow.add(idLabel);
+        infoRow.add(Box.createHorizontalGlue());
+
+        detailPanel.add(infoRow, BorderLayout.NORTH);
+
+        // ---------- Center: Thumbnail image ----------
+        imgLabel = new JLabel();
+        imgLabel.setHorizontalAlignment(JLabel.CENTER);
+        detailPanel.add(imgLabel, BorderLayout.CENTER);
+
+        // ---------- Ingredients & Instructions ----------
+        JPanel textPanel = new JPanel();
+        textPanel.setOpaque(false);
+        textPanel.setLayout(new GridLayout(2, 1, 0, 8));
+
+        ingArea = new JTextArea();
+        ingArea.setEditable(false);
+        ingArea.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        ingArea.setLineWrap(true);
+        ingArea.setWrapStyleWord(true);
+        ingArea.setOpaque(false);
+        ingArea.setBorder(BorderFactory.createTitledBorder("Ingredients"));
+
+        instrArea = new JTextArea();
+        instrArea.setEditable(false);
+        instrArea.setFont(new Font("Segoe UI", Font.ITALIC, 15));
+        instrArea.setLineWrap(true);
+        instrArea.setWrapStyleWord(true);
+        instrArea.setOpaque(false);
+        instrArea.setBorder(BorderFactory.createTitledBorder("Instructions"));
+
+        textPanel.add(new JScrollPane(ingArea));
+        textPanel.add(new JScrollPane(instrArea));
+        detailPanel.add(textPanel, BorderLayout.SOUTH);
+
+        mainPanel.add(detailPanel, BorderLayout.CENTER);
+
+        // --------- List selection updates detail panel ---------
+        recipeList.addListSelectionListener(e -> {
+            Recipe selected = recipeList.getSelectedValue();
+            if (selected != null) {
+                nameLabel.setText("Name: " + selected.getName());
+                typeLabel.setText("Type: " + selected.getType());
+                idLabel.setText("ID: " + selected.getId());
+                if (selected.getImagePath() != null && !selected.getImagePath().isEmpty())
+                    imgLabel.setIcon(ImageUtils.getScaledImage(selected.getImagePath(), 120, 90));
+                else
+                    imgLabel.setIcon(null);
+
+                StringBuilder sbIng = new StringBuilder();
+                selected.getIngredients().forEach(ing -> sbIng.append("- ").append(ing.getName()).append(": ").append(ing.getAmount()).append("\n"));
+                ingArea.setText(sbIng.toString());
+                instrArea.setText(selected.getInstructions());
             } else {
-                // Nếu không tìm thấy resource, thử đường dẫn tuyệt đối (chỉ để test)
-                String absPath = "/Users/tranminhkhoa/eclipse-workspace/RecipeOrganizer/src/img/background1.jpg";
-                System.out.println("Thử load ảnh bằng đường dẫn tuyệt đối: " + absPath);
-                bgImage = new ImageIcon(absPath).getImage();
+                nameLabel.setText("Name:");
+                typeLabel.setText("Type:");
+                idLabel.setText("ID:");
+                imgLabel.setIcon(null);
+                ingArea.setText("");
+                instrArea.setText("");
             }
-        } catch (Exception e) {
-            System.out.println("Không tìm thấy ảnh nền: " + e.getMessage());
-        }
-        BackgroundPanel bgPanel = new BackgroundPanel(bgImage);
-        bgPanel.setLayout(new BorderLayout());
-        bgPanel.add(tableScroll, BorderLayout.CENTER);
+        });
 
-        // Main layout
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.add(formPanel, BorderLayout.WEST);
-        mainPanel.add(bgPanel, BorderLayout.CENTER); // Thay vì add tableScroll trực tiếp
-        add(mainPanel, BorderLayout.CENTER);
+        // --- Final assembly ---
+        rootPanel.add(mainPanel, gbc);
+        setContentPane(rootPanel);
 
-        // Button actions
-        addButton.addActionListener(this::onAdd);
-        updateButton.addActionListener(this::onUpdate);
-        deleteButton.addActionListener(this::onDelete);
-        searchButton.addActionListener(this::onSearch);
-        recipeTable.getSelectionModel().addListSelectionListener(e -> onTableSelect());
-
-        pack();
-        setLocationRelativeTo(null);
+        // --- Load initial data ---
+        refreshRecipeList();
     }
 
+    /** Loads recipe list from manager and applies filter/sort. */
+    private void refreshRecipeList() {
+        listModel.clear();
+        List<Recipe> recipes = manager.getAllRecipes();
+
+        // Filter by type if needed
+        String selectedType = Objects.requireNonNull(filterTypeCombo.getSelectedItem()).toString();
+        if (!"All".equals(selectedType)) {
+            recipes = recipes.stream().filter(r -> r.getType().equalsIgnoreCase(selectedType)).collect(Collectors.toList());
+        }
+        // Sort by name
+        recipes.sort((a, b) -> sortByNameAsc
+                ? a.getName().compareToIgnoreCase(b.getName())
+                : b.getName().compareToIgnoreCase(a.getName()));
+
+        for (Recipe recipe : recipes) {
+            listModel.addElement(recipe);
+        }
+    }
+
+    /** Handles Add button, shows dialog, saves if valid. */
     private void onAdd(ActionEvent e) {
-        try {
-            int id = Integer.parseInt(idField.getText().trim());
-            String name = nameField.getText().trim();
-            String type = (String) typeCombo.getSelectedItem();
-            String ingredients = ingredientField.getText().trim();
-            String recipe = recipeArea.getText().trim();
-            Recipe r = new Recipe(id, name, type, ingredients, recipe);
-            recipeManager.addRecipe(r);
-            tableModel.setRecipes(recipeManager.getRecipes());
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Invalid input! " + ex.getMessage());
+        RecipeDialog dialog = new RecipeDialog(this, null);
+        dialog.setVisible(true);
+        Recipe recipe = dialog.getRecipe();
+        if (recipe != null) {
+            manager.addRecipe(recipe);
+            refreshRecipeList();
         }
     }
 
-    private void onUpdate(ActionEvent e) {
-        int selected = recipeTable.getSelectedRow();
-        if (selected != -1) {
-            try {
-                int id = Integer.parseInt(idField.getText().trim());
-                String name = nameField.getText().trim();
-                String type = (String) typeCombo.getSelectedItem();
-                String ingredients = ingredientField.getText().trim();
-                String recipe = recipeArea.getText().trim();
-                Recipe r = new Recipe(id, name, type, ingredients, recipe);
-                recipeManager.updateRecipe(selected, r);
-                tableModel.setRecipes(recipeManager.getRecipes());
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Invalid input! " + ex.getMessage());
+    /** Handles Edit button, shows dialog, saves if valid. */
+    private void onEdit(ActionEvent e) {
+        int idx = recipeList.getSelectedIndex();
+        if (idx >= 0) {
+            RecipeDialog dialog = new RecipeDialog(this, listModel.get(idx));
+            dialog.setVisible(true);
+            Recipe edited = dialog.getRecipe();
+            if (edited != null) {
+                manager.updateRecipe(idx, edited);
+                refreshRecipeList();
             }
         }
     }
 
+    /** Handles Delete button, confirm & delete. */
     private void onDelete(ActionEvent e) {
-        int selected = recipeTable.getSelectedRow();
-        if (selected != -1) {
-            recipeManager.deleteRecipe(selected);
-            tableModel.setRecipes(recipeManager.getRecipes());
+        int idx = recipeList.getSelectedIndex();
+        if (idx >= 0) {
+            int confirm = JOptionPane.showConfirmDialog(this, "Are you sure to delete this recipe?");
+            if (confirm == JOptionPane.YES_OPTION) {
+                manager.deleteRecipe(idx);
+                refreshRecipeList();
+            }
         }
     }
 
-    private void onSearch(ActionEvent e) {
-        String keyword = searchField.getText().trim().toLowerCase();
-        List<Recipe> filtered = recipeManager.getRecipes().stream()
-                .filter(r -> r.getName().toLowerCase().contains(keyword) || r.getIngredients().toLowerCase().contains(keyword))
-                .collect(Collectors.toList());
-        tableModel.setRecipes(filtered);
-    }
-
-    private void onTableSelect() {
-        int selected = recipeTable.getSelectedRow();
-        if (selected != -1) {
-            Recipe r = recipeManager.getRecipes().get(selected);
-            idField.setText(String.valueOf(r.getId()));
-            nameField.setText(r.getName());
-            typeCombo.setSelectedItem(r.getType());
-            ingredientField.setText(r.getIngredients());
-            recipeArea.setText(r.getRecipe());
+    /** File > Open: show chooser, load new JSON file. */
+    private void openRecipeJsonFile() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Open Recipe JSON File");
+        int result = chooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            String filePath = chooser.getSelectedFile().getAbsolutePath();
+            currentFile = filePath;
+            manager = new RecipeManager(new JsonRecipeDao(currentFile));
+            refreshRecipeList();
         }
     }
-}
 
-class BackgroundPanel extends JPanel {
-    private Image backgroundImage;
-    public BackgroundPanel(Image image) {
-        this.backgroundImage = image;
+    /** File > New: reload from sample file. */
+    private void newRecipeFile() {
+        currentFile = "recipes_sample.json";
+        manager = new RecipeManager(new JsonRecipeDao(currentFile));
+        refreshRecipeList();
     }
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        if (backgroundImage != null) {
-            g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+
+    /**
+     * Custom renderer for JList. Shows thumbnail and type color.
+     */
+    private static class RecipeListRenderer extends JPanel implements ListCellRenderer<Recipe> {
+        private JLabel iconLabel = new JLabel();
+        private JLabel nameLabel = new JLabel();
+        private JLabel typeLabel = new JLabel();
+
+        public RecipeListRenderer() {
+            setLayout(new BorderLayout(6,0));
+            JPanel textPanel = new JPanel(new BorderLayout());
+            textPanel.setOpaque(false);
+            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            typeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            textPanel.add(nameLabel, BorderLayout.CENTER);
+            textPanel.add(typeLabel, BorderLayout.SOUTH);
+
+            add(iconLabel, BorderLayout.WEST);
+            add(textPanel, BorderLayout.CENTER);
+            setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
         }
+
+        @Override
+        public Component getListCellRendererComponent(JList<? extends Recipe> list, Recipe value, int index, boolean isSelected, boolean cellHasFocus) {
+            if (value.getImagePath() != null && !value.getImagePath().isEmpty()) {
+                iconLabel.setIcon(ImageUtils.getScaledImage(value.getImagePath(), 54, 42));
+            } else {
+                iconLabel.setIcon(null);
+            }
+            nameLabel.setText(value.getName());
+            typeLabel.setText(value.getType());
+            typeLabel.setForeground(getTypeColor(value.getType()));
+            setBackground(isSelected ? new Color(220,240,255) : new Color(255,255,255,180));
+            return this;
+        }
+
+        /** Returns type color for type label. */
+        private Color getTypeColor(String type) {
+            switch (type.toLowerCase()) {
+                case "starter": return new Color(0, 128, 255);
+                case "main dish": return new Color(85, 168, 52);
+                case "dessert": return new Color(205, 87, 51);
+                case "salad": return new Color(89, 191, 81);
+                case "soup": return new Color(232, 188, 39);
+                default: return Color.DARK_GRAY;
+            }
+        }
+    }
+
+    /** The entry point for launching the app */
+    public static void main(String[] args) {
+        // Optional: FlatLaf look
+        // try { UIManager.setLookAndFeel(new com.formdev.flatlaf.FlatLightLaf()); } catch (Exception e) {}
+        SwingUtilities.invokeLater(MainWindow::new);
     }
 }

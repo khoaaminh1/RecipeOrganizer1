@@ -1,0 +1,133 @@
+[
+    {
+      "id": 1,
+      "name": "Caesar Salad",
+      "type": "salad",
+      "imagePath": "resources/images/icons/caesar_salad.jpg",
+      "ingredients": [
+        {"name": "Romaine Lettuce", "amount": "2 cups"},
+        {"name": "Parmesan Cheese", "amount": "50g"},
+        {"name": "Croutons", "amount": "1 cup"},
+        {"name": "Caesar Dressing", "amount": "2 tbsp"}
+      ],
+      "instructions": "Mix all ingredients, toss with dressing, and serve chilled."
+    },
+    {
+      "id": 2,
+      "name": "Tomato Soup",
+      "type": "soup",
+      "imagePath": "resources/images/icons/tomato_soup.jpg",
+      "ingredients": [
+        {"name": "Tomato", "amount": "3"},
+        {"name": "Onion", "amount": "1"},
+        {"name": "Garlic", "amount": "2 cloves"},
+        {"name": "Vegetable Stock", "amount": "500ml"}
+      ],
+      "instructions": "Cook tomato, onion, garlic until soft. Blend with stock and simmer 10 mins."
+    },
+    {
+      "id": 3,
+      "name": "Greek Salad",
+      "type": "salad",
+      "imagePath": "resources/images/icons/greek_salad.jpg",
+      "ingredients": [
+        {"name": "Cucumber", "amount": "1"},
+        {"name": "Tomato", "amount": "2"},
+        {"name": "Feta Cheese", "amount": "100g"},
+        {"name": "Black Olive", "amount": "10"}
+      ],
+      "instructions": "Chop vegetables, mix with cheese and olives, and drizzle with olive oil."
+    },
+    {
+      "id": 4,
+      "name": "Minestrone",
+      "type": "soup",
+      "imagePath": "resources/images/icons/minestrone.jpg",
+      "ingredients": [
+        {"name": "Carrot", "amount": "1"},
+        {"name": "Celery", "amount": "1 stalk"},
+        {"name": "Potato", "amount": "1"},
+        {"name": "Kidney Beans", "amount": "100g"}
+      ],
+      "instructions": "Simmer all vegetables and beans in stock until tender. Serve hot."
+    },
+    {
+      "id": 5,
+      "name": "Spring Rolls",
+      "type": "starter",
+      "imagePath": "resources/images/icons/spring_rolls.jpg",
+      "ingredients": [
+        {"name": "Rice Paper", "amount": "10 sheets"},
+        {"name": "Shrimp", "amount": "100g"},
+        {"name": "Vermicelli", "amount": "50g"},
+        {"name": "Lettuce", "amount": "3 leaves"}
+      ],
+      "instructions": "Soak rice paper, wrap all ingredients, and serve with dipping sauce."
+    },
+    {
+      "id": 6,
+      "name": "Spaghetti Carbonara",
+      "type": "main dish",
+      "imagePath": "resources/images/icons/spaghetti_carbonara.jpg",
+      "ingredients": [
+        {"name": "Spaghetti", "amount": "200g"},
+        {"name": "Egg", "amount": "2"},
+        {"name": "Bacon", "amount": "100g"},
+        {"name": "Parmesan Cheese", "amount": "50g"}
+      ],
+      "instructions": "Cook spaghetti, mix with beaten egg, fried bacon, and cheese. Serve immediately."
+    },
+    {
+      "id": 7,
+      "name": "Chocolate Mousse",
+      "type": "dessert",
+      "imagePath": "resources/images/icons/chocolate_mousse.jpg",
+      "ingredients": [
+        {"name": "Dark Chocolate", "amount": "100g"},
+        {"name": "Egg White", "amount": "2"},
+        {"name": "Sugar", "amount": "30g"},
+        {"name": "Whipping Cream", "amount": "50ml"}
+      ],
+      "instructions": "Melt chocolate, fold in whipped egg whites and cream. Chill before serving."
+    },
+    {
+      "id": 8,
+      "name": "Pumpkin Soup",
+      "type": "soup",
+      "imagePath": "resources/images/icons/pumpkin_soup.jpg",
+      "ingredients": [
+        {"name": "Pumpkin", "amount": "300g"},
+        {"name": "Onion", "amount": "1"},
+        {"name": "Milk", "amount": "100ml"},
+        {"name": "Salt", "amount": "to taste"}
+      ],
+      "instructions": "Boil pumpkin and onion until soft, blend, add milk, season, and simmer."
+    },
+    {
+      "id": 9,
+      "name": "Bruschetta",
+      "type": "starter",
+      "imagePath": "resources/images/icons/bruschetta.jpg",
+      "ingredients": [
+        {"name": "Baguette", "amount": "1"},
+        {"name": "Tomato", "amount": "2"},
+        {"name": "Basil", "amount": "a few leaves"},
+        {"name": "Olive Oil", "amount": "2 tbsp"}
+      ],
+      "instructions": "Toast bread, top with chopped tomato, basil, and olive oil."
+    },
+    {
+      "id": 10,
+      "name": "Tiramisu",
+      "type": "dessert",
+      "imagePath": "resources/images/icons/tiramisu.jpg",
+      "ingredients": [
+        {"name": "Ladyfingers", "amount": "12"},
+        {"name": "Mascarpone", "amount": "250g"},
+        {"name": "Coffee", "amount": "100ml"},
+        {"name": "Cocoa Powder", "amount": "1 tbsp"}
+      ],
+      "instructions": "Layer soaked ladyfingers with mascarpone, dust with cocoa. Chill before serving."
+    }
+  ]
+  

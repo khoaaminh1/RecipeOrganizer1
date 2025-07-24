@@ -5,40 +5,34 @@ import model.Recipe;
 import javax.swing.table.AbstractTableModel;
 import java.util.List;
 
+/**
+ * TableModel for displaying recipes in a JTable.
+ */
 public class RecipeTableModel extends AbstractTableModel {
     private List<Recipe> recipes;
-    private final String[] columnNames = { "ID", "Name", "Type", "Ingredients", "Recipe" };
+    private String[] columns = { "Name", "Ingredients", "Instructions" };
 
-    public void setRecipes(List<Recipe> recipes) {
+    public RecipeTableModel(List<Recipe> recipes) {
         this.recipes = recipes;
-        fireTableDataChanged();
     }
 
     @Override
-    public int getRowCount() {
-        return recipes != null ? recipes.size() : 0;
-    }
+    public int getRowCount() { return recipes.size(); }
 
     @Override
-    public int getColumnCount() {
-        return 5;
-    }
+    public int getColumnCount() { return columns.length; }
 
     @Override
-    public Object getValueAt(int rowIndex, int columnIndex) {
-        Recipe r = recipes.get(rowIndex);
-        return switch (columnIndex) {
-            case 0 -> r.getId();
-            case 1 -> r.getName();
-            case 2 -> r.getType();
-            case 3 -> r.getIngredients();
-            case 4 -> r.getRecipe();
-            default -> null;
-        };
-    }
+    public String getColumnName(int col) { return columns[col]; }
 
     @Override
-    public String getColumnName(int column) {
-        return columnNames[column];
+    public Object getValueAt(int row, int col) {
+        Recipe r = recipes.get(row);
+        switch (col) {
+            case 0: return r.getName();
+            case 1: return r.getIngredients().size();
+            case 2: return r.getInstructions();
+            default: return "";
+        }
     }
 }

@@ -1,77 +1,124 @@
 package view;
 
+import model.Ingredient;
 import model.Recipe;
+import utils.ImageUtils;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 public class RecipeDialog extends JDialog {
-    private JTextField idField = new JTextField(10);
-    private JTextField nameField = new JTextField(20);
-    private JComboBox<String> typeCombo = new JComboBox<>(new String[]{"STARTERS", "MAIN DISH", "DESSERT"});
-    private JTextArea ingredientsArea = new JTextArea(5, 20);
-    private JTextArea recipeArea = new JTextArea(5, 20);
-    private boolean saved = false;
+    private JTextField nameField;
+    private JComboBox<String> typeCombo;
+    private JTextArea ingredientsArea;
+    private JTextArea instructionsArea;
+    private JLabel imagePreview;
+    private String imagePath = "";
+    private Recipe result = null;
+
+    private static final String[] TYPES = {"starter", "main dish", "dessert", "salad", "soup"};
 
     public RecipeDialog(JFrame parent, Recipe recipe) {
-        super(parent, "Recipe", true);
-        setLayout(new BorderLayout());
+        super(parent, recipe == null ? "Add Recipe" : "Edit Recipe", true);
+        setSize(520, 420);
+        setLocationRelativeTo(parent);
+        setLayout(new BorderLayout(10,10));
 
-        JPanel fields = new JPanel(new GridLayout(10, 1));
-        fields.add(new JLabel("ID:"));
-        fields.add(idField);
-        fields.add(new JLabel("Name:"));
-        fields.add(nameField);
-        fields.add(new JLabel("Type:"));
-        fields.add(typeCombo);
-        fields.add(new JLabel("Ingredients:"));
-        fields.add(new JScrollPane(ingredientsArea));
-        fields.add(new JLabel("Recipe:"));
-        fields.add(new JScrollPane(recipeArea));
+        JPanel formPanel = new JPanel(new GridLayout(7, 1, 4, 4));
+        formPanel.add(new JLabel("Name:"));
+        nameField = new JTextField();
+        formPanel.add(nameField);
 
-        add(fields, BorderLayout.CENTER);
+        formPanel.add(new JLabel("Type:"));
+        typeCombo = new JComboBox<>(TYPES);
+        formPanel.add(typeCombo);
 
-        JButton saveButton = new JButton("Save");
-        saveButton.addActionListener(e -> {
-            saved = true;
-            setVisible(false);
-        });
+        formPanel.add(new JLabel("Ingredients (one per line, name:amount):"));
+        ingredientsArea = new JTextArea(3, 30);
+        JScrollPane ingScroll = new JScrollPane(ingredientsArea);
+        formPanel.add(ingScroll);
 
-        JButton cancelButton = new JButton("Cancel");
-        cancelButton.addActionListener(e -> setVisible(false));
+        formPanel.add(new JLabel("Instructions:"));
+        instructionsArea = new JTextArea(3, 30);
+        JScrollPane instScroll = new JScrollPane(instructionsArea);
+        formPanel.add(instScroll);
 
-        JPanel buttons = new JPanel();
-        buttons.add(saveButton);
-        buttons.add(cancelButton);
-        add(buttons, BorderLayout.SOUTH);
+        // Image select
+        JPanel imgPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        imagePreview = new JLabel();
+        imagePreview.setPreferredSize(new Dimension(120, 80));
+        JButton btnChoose = new JButton("Choose image");
+        btnChoose.addActionListener(this::onChooseImage);
+        imgPanel.add(btnChoose);
+        imgPanel.add(imagePreview);
 
+        add(formPanel, BorderLayout.CENTER);
+        add(imgPanel, BorderLayout.EAST);
+
+        // Buttons
+        JPanel btnPanel = new JPanel();
+        JButton btnOK = new JButton("OK");
+        JButton btnCancel = new JButton("Cancel");
+        btnOK.addActionListener(this::onOK);
+        btnCancel.addActionListener(e -> setVisible(false));
+        btnPanel.add(btnOK);
+        btnPanel.add(btnCancel);
+        add(btnPanel, BorderLayout.SOUTH);
+
+        // Fill if edit
         if (recipe != null) {
-            idField.setText(String.valueOf(recipe.getId()));
             nameField.setText(recipe.getName());
             typeCombo.setSelectedItem(recipe.getType());
-            ingredientsArea.setText(recipe.getIngredients());
-            recipeArea.setText(recipe.getRecipe());
+            StringBuilder sb = new StringBuilder();
+            for (Ingredient ing : recipe.getIngredients()) {
+                sb.append(ing.getName()).append(":").append(ing.getAmount()).append("\n");
+            }
+            ingredientsArea.setText(sb.toString());
+            instructionsArea.setText(recipe.getInstructions());
+            imagePath = recipe.getImagePath();
+            if (imagePath != null && !imagePath.isEmpty())
+                imagePreview.setIcon(ImageUtils.getScaledImage(imagePath, 120, 80));
         }
-
-        pack();
-        setLocationRelativeTo(parent);
     }
 
-    public boolean isSaved() {
-        return saved;
+    private void onChooseImage(ActionEvent e) {
+        JFileChooser chooser = new JFileChooser();
+        int res = chooser.showOpenDialog(this);
+        if (res == JFileChooser.APPROVE_OPTION) {
+            imagePath = chooser.getSelectedFile().getAbsolutePath();
+            imagePreview.setIcon(ImageUtils.getScaledImage(imagePath, 120, 80));
+        }
+    }
+
+    private void onOK(ActionEvent e) {
+        String name = nameField.getText().trim();
+        String type = typeCombo.getSelectedItem().toString();
+        String ingText = ingredientsArea.getText().trim();
+        String inst = instructionsArea.getText().trim();
+
+        if (name.isEmpty() || ingText.isEmpty() || inst.isEmpty() || type.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill all fields.");
+            return;
+        }
+        // Parse ingredients
+        List<Ingredient> ingredients = new ArrayList<>();
+        for (String line : ingText.split("\\n")) {
+            String[] parts = line.split(":");
+            if (parts.length == 2)
+                ingredients.add(new Ingredient(parts[0].trim(), parts[1].trim()));
+        }
+        if (ingredients.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please enter at least one ingredient.");
+            return;
+        }
+        result = new Recipe(0, name, type, imagePath, ingredients, inst);
+        setVisible(false);
     }
 
     public Recipe getRecipe() {
-        try {
-            int id = Integer.parseInt(idField.getText().trim());
-            String name = nameField.getText().trim();
-            String type = (String) typeCombo.getSelectedItem();
-            String ingredients = ingredientsArea.getText().trim();
-            String recipe = recipeArea.getText().trim();
-            return new Recipe(id, name, type, ingredients, recipe);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Invalid input! " + e.getMessage());
-            return null;
-        }
+        return result;
     }
 }
